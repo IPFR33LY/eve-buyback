@@ -25,8 +25,10 @@ def lambda_handler(event, context):
 class AppraisalParser:
     def main(self):
         result = []
+        print("loading contracts")
         for contract in self.get_contracts():
             result.append(self.extend_contract(contract))
+        print("updating %d contracts" % len(result))
         self.update_contracts(result)
 
     def get_contracts(self):

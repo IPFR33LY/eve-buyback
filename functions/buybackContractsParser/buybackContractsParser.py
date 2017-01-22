@@ -38,7 +38,7 @@ class BuybackContractsParser:
         self.write(contracts)
 
     def write(self, documents):
-        print("writing results")
+        print("writing %d results" % len(documents))
         contract_ids = self.get_contract_ids(documents)
         MongoProvider().cursor('contracts').delete_many({'contractId': {'$in': contract_ids}})
         MongoProvider().cursor('contracts').insert_many(documents)
