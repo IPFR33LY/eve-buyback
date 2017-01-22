@@ -1,5 +1,6 @@
 import json
 import xml
+from datetime import datetime
 from html.parser import HTMLParser
 
 import requests
@@ -27,10 +28,16 @@ class AppraisalParser:
     def main(self):
         result = []
         print("loading contracts")
-        for contract in self.get_contracts():
-            result.append(self.extend_contract(contract))
+        contracts = self.get_contracts()
+        print("processing %d contracts" % len(contracts))
+        for i in range(0, len(contracts) - 1):
+            contract = contracts[i]
+            if 'link' not in contract:
+                print("processing contract %d/%d" % (i + 1, len(contracts)))
+                result.append(self.extend_contract(contract))
         print("updating %d contracts" % len(result))
-        self.update_contracts(result)
+        if len(result) > 0:
+            self.update_contracts(result)
 
     def get_contracts(self):
         result = []
@@ -84,10 +91,12 @@ class AppraisalParser:
 
     def get_appraisal_link(self, items):
         items_with_names = self.get_items_with_names(items)
+        print("types has %d entries" % len(self.types))
         items_as_string = self.concatenate_items(items_with_names)
         payload = {'raw_paste': items_as_string, 'hide_buttons': 'false', 'paste_autosubmit': 'false',
                    'market': '30000142', 'save': 'true'}
-        estimate = requests.post("https://skyblade.de/estimate", payload)
+        # this may fail on OS X https://github.com/kennethreitz/requests/issues/2022
+        estimate = requests.post("https://skyblade.de/estimate", payload, verify=False)
 
         parser = EvepraisalParser()
         parser.feed(estimate.text)
@@ -107,14 +116,31 @@ class AppraisalParser:
             quantified_items.append(item['typeName'] + " x" + str(item['quantity']))
         return "\n".join(quantified_items)
 
+    types = {}
+
     def get_items_with_names(self, items):
+        new_items_count = 0
+        before = datetime.now()
         for item in items:
             type_id = item['typeId']
-            response = requests.get("https://crest-tq.eveonline.com/inventory/types/%d/" % type_id)
-            data = json.loads(response.text)
-            item['typeName'] = data['name']
+            if type_id in self.types:
+                item['typeName'] = self.types[type_id]
+            else:
+                url = "https://crest-tq.eveonline.com/inventory/types/%d/" % type_id
+                response = requests.get(url)
+                data = json.loads(response.text)
+                item['typeName'] = data['name']
+                self.types[type_id] = data['name']
+                new_items_count += 1
+        after = datetime.now()
+        delta = after - before
+        print("loading %d new items took %ds" % (new_items_count, delta.seconds))
         return items
 
 
 if __name__ == '__main__':
+    total_before = datetime.now()
     AppraisalParser().main()
+    total_after = datetime.now()
+    total_delta = total_after - total_before
+    print("total duration: %ds" % total_delta.seconds)
