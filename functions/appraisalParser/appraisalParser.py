@@ -13,6 +13,7 @@ class EvepraisalParser(HTMLParser):
 
     def handle_data(self, data):
         if "Result #" in data:
+            # splitting "Result #5904 [Assets]"
             data = data.split('#')[1].split(' ')[0]
             self.data.append(data)
 
@@ -86,12 +87,12 @@ class AppraisalParser:
         items_as_string = self.concatenate_items(items_with_names)
         payload = {'raw_paste': items_as_string, 'hide_buttons': 'false', 'paste_autosubmit': 'false',
                    'market': '30000142', 'save': 'true'}
-        estimate = requests.post("http://evepraisal.com/estimate", payload)
+        estimate = requests.post("https://skyblade.de/estimate", payload)
 
         parser = EvepraisalParser()
         parser.feed(estimate.text)
         number = parser.data[0]
-        link = "http://evepraisal.com/e/" + number
+        link = "https://skyblade.de/e/" + number
 
         return link
 
