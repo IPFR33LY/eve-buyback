@@ -143,7 +143,8 @@ class ContractsParserTest(unittest.TestCase):
             'endStationId': 60015108,
             'acceptorId': 258695360,
             'assigneeId': 386292982,
-            'contractId': 97809127
+            'contractId': 97809127,
+            "issuerId": 91512526
         }
 
         import xml.etree.ElementTree as ET

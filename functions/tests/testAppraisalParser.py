@@ -51,36 +51,14 @@ class AppraisalParserTest(unittest.TestCase):
             "assigneeId": 99007072,
             "volume": 108000,
             "numDays": 0,
-            "acceptorId": 98171958
-        }]
-        expected = [{
-            "apiId": "588333d2623d5f6f694b6ec7",
-            "type": "ItemExchange",
-            "price": 453600000,
-            "items": [
-                {
-                    "quantity": 21600,
-                    "typeId": 4051
-                }
-            ],
-            "reward": 0,
-            "status": "Completed",
-            "contractId": 113085803,
-            "dateCompleted": "2017-01-11 20:12:37",
-            "title": "1 Tower's Fuel @ 21k ea",
-            "endStationId": 1022847969432,
-            "assigneeId": 99007072,
-            "volume": 108000,
-            "numDays": 0,
             "acceptorId": 98171958,
-            'buy': 4.94,
-            'sell': 5.06,
-            'link': 'http://evepraisal.com/e/12345'
+            'issuerId': 96912193
         }]
         find_contracts_method = mock.patch.object(self.sut, 'get_contracts', return_value=contracts_in_db).start()
         items_method = mock.patch.object(self.sut, 'get_items_with_names', return_value="items").start()
         appraisal_result = {'buy': 4.94, 'sell': 5.06, 'link': 'http://evepraisal.com/e/12345'}
         appraisal_method = mock.patch.object(self.sut, 'get_appraisal_details', return_value=appraisal_result).start()
+        character_method = mock.patch.object(self.sut, 'get_character_name', return_value="test").start()
         update_method = mock.patch.object(self.sut, 'update_contracts').start()
 
         self.sut.main()
@@ -199,4 +177,24 @@ class AppraisalParserTest(unittest.TestCase):
         result = self.sut.get_contract_ids(contracts)
 
         self.assertEqual(result, expected)
+
+    def test_extend_contract(self):
+        items_method = mock.patch.object(self.sut, 'get_items_with_names', return_value="items").start()
+        details_method = mock.patch.object(self.sut, 'get_appraisal_details',
+                                           return_value={'buy': 5, 'sell': 6, 'link': 'link'}).start()
+        name_method = mock.patch.object(self.sut, 'get_character_name', return_value="name").start()
+
+        result = self.sut.extend_contract({'issuerId': 123, 'items': []})
+
+        self.assertEqual(result, {'buy': 5, 'sell': 6, 'link': 'link', 'client': 'name', 'items': [], 'issuerId': 123})
+
+        name_method.assert_called_with(123)
+
+    def test_get_character_name(self):
+        get_method = mock.patch.object(requests, 'get', return_value=Response(200, 'url', '<eveapi version="2"><currentTime>2017-01-22 15:05:04</currentTime><result><rowset name="characters" key="characterID" columns="name,characterID"><row name="Mephistopheles Spirit" characterID="96912193"/></rowset></result><cachedUntil>2017-02-22 15:05:04</cachedUntil></eveapi>')).start()
+
+        result = self.sut.get_character_name(123)
+
+        self.assertEqual(result, 'Mephistopheles Spirit')
+        get_method.assert_called_with('https://api.eveonline.com/eve/CharacterName.xml.aspx?ids=123')
 

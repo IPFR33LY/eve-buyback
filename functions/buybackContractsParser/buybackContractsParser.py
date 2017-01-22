@@ -108,7 +108,8 @@ class BuybackContractsParser:
             'status': row.get('status'),
             'title': row.get('title'),
             'reward': float(row.get('reward')),
-            'contractId': int(row.get('contractID'))
+            'contractId': int(row.get('contractID')),
+            'issuerId': int(row.get('issuerID'))
         }
 
     def get_rows(self, xml_string):

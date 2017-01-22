@@ -1,9 +1,9 @@
 import json
+import xml
+from html.parser import HTMLParser
 
 import requests
 from eveapimongo import MongoProvider
-
-from HTMLParser import HTMLParser
 
 
 class EvepraisalParser(HTMLParser):
@@ -58,7 +58,26 @@ class AppraisalParser:
         contract['buy'] = details['buy']
         contract['sell'] = details['sell']
         contract['link'] = details['link']
+        contract['client'] = self.get_character_name(contract['issuerId'])
         return contract
+
+    def get_character_name(self, character_id):
+        response = requests.get('https://api.eveonline.com/eve/CharacterName.xml.aspx?ids=%d' % character_id)
+        rows = self.get_rows(response.text)
+        return rows[0].get('name')
+
+    def get_rows(self, xml_string):
+        e = xml.etree.ElementTree.fromstring(xml_string)
+        xml_result = e[1]
+
+        if xml_result.tag == 'error':
+            print("ERROR: " + xml_result.text)
+            return None
+
+        result = []
+        for row in xml_result[0]:
+            result.append(row)
+        return result
 
     def get_appraisal_link(self, items):
         items_with_names = self.get_items_with_names(items)

@@ -45,6 +45,7 @@ class Mock:
             'assigneeId': 386292982,
             'items': expected_items,
             'contractId': 97809127,
+            'issuerId': 91512526,
         },
         {
             'title': '',
@@ -58,6 +59,7 @@ class Mock:
             'endStationId': 60015108,
             'acceptorId': 258695360,
             'assigneeId': 386292982,
+            'issuerId': 1524136743,
             'contractId': 97884327
         },
         {
@@ -72,6 +74,7 @@ class Mock:
             'endStationId': 60015108,
             'acceptorId': 258695360,
             'assigneeId': 386292982,
+            'issuerId': 1077170504,
             'contractId': 97937400
         },
         {
@@ -86,6 +89,7 @@ class Mock:
             'endStationId': 60015108,
             'acceptorId': 258695360,
             'assigneeId': 386292982,
+            'issuerId': 92084830,
             'contractId': 97981024
         },
         {
@@ -100,6 +104,7 @@ class Mock:
             'endStationId': 60015106,
             'acceptorId': 258695360,
             'assigneeId': 0,
+            'issuerId': 337129922,
             'contractId': 98256398
         }
     ]
