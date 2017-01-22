@@ -1,4 +1,4 @@
-FROM python:2.7-slim
+FROM python:3.5-slim
 
 RUN pip install pymongo eveapimongo
 

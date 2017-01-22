@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from eveapimongo import MongoProvider
 
@@ -9,9 +10,8 @@ def is_favicon(environ):
 
 def get_pending():
     contracts = []
-    for row in MongoProvider().find('contracts'):
-        if row.get('status') == 'Outstanding' and row.get('type') == 'ItemExchange':
-            contracts.append(row)
+    for row in get_pending_contracts():
+        contracts.append(row)
     for contract in contracts:
         del contract['_id']
         del contract['apiId']
@@ -21,6 +21,11 @@ def get_pending():
             contract['link'] = 'pending'
             contract['client'] = 'pending'
     return contracts
+
+
+def get_pending_contracts():
+    return MongoProvider().find_filtered('contracts', {'status': 'Outstanding', 'type': 'ItemExchange'})
+
 
 def process_request(environ):
     url_path = environ.get('PATH_INFO', '').lstrip('/')
@@ -38,8 +43,12 @@ def app(environ, start_response):
 
     # parameters = parse_qs(environ.get('QUERY_STRING', ''))
 
+    before = datetime.now()
     response_data = process_request(environ)
     start_response('200 OK', [('Content-Type', 'application/json'), ("Access-Control-Allow-Origin", "*")])
+    after = datetime.now()
+    delta = after - before
+    print("processing took %d seconds" % delta.seconds)
 
     return json_to_response(response_data)
 
