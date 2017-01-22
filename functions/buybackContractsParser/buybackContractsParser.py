@@ -1,4 +1,5 @@
 import xml.etree.ElementTree
+from datetime import datetime
 
 import grequests
 from eveapimongo import MongoProvider
@@ -18,7 +19,7 @@ class ExternalProvider:
 
     def get_parallel_api_results(self, urls):
         rs = (grequests.get(u['url']) for u in urls)
-        result = grequests.map(rs)
+        result = grequests.imap(rs)
         return result
 
 
@@ -37,18 +38,30 @@ class BuybackContractsParser:
         contracts = self.merge_api_into_contract(apis_with_contracts_and_items)
         self.write(contracts)
 
-    def write(self, documents):
-        print("writing %d results" % len(documents))
-        contract_ids = self.get_contract_ids(documents)
-        MongoProvider().cursor('contracts').delete_many({'contractId': {'$in': contract_ids}})
-        MongoProvider().cursor('contracts').insert_many(documents)
-
     def get_contracts(self, apis):
         urls = self.build_contract_urls(apis)
         responses = self.external_provider.get_parallel_api_results(urls)
         apis_with_responses = self.create_dict_with_apis_and_responses(responses, apis)
         apis_with_contracts = self.transform_contract_responses_to_contracts(apis_with_responses)
         return apis_with_contracts
+
+    def extend_contracts_with_items(self, apis_with_contracts, apis):
+        urls = self.build_contract_items_urls(apis_with_contracts, apis)
+        print("calling items endpoints with %d urls" % len(urls))
+        api_response = self.external_provider.get_parallel_api_results(urls)
+        print("processing items")
+        for response in api_response:
+            items = self.parse_items(response.text)
+            print(response.url)
+            contract = self.find_contract_for_url(response.url, apis_with_contracts, apis)
+            contract['items'] = items
+        return apis_with_contracts
+
+    def write(self, documents):
+        print("writing %d results" % len(documents))
+        contract_ids = self.get_contract_ids(documents)
+        MongoProvider().cursor('contracts').delete_many({'contractId': {'$in': contract_ids}})
+        MongoProvider().cursor('contracts').insert_many(documents)
 
     def create_dict_with_apis_and_responses(self, responses, apis):
         result = {}
@@ -84,7 +97,9 @@ class BuybackContractsParser:
             contracts = self.transform_contract_response_to_contracts(responses[apiId])
             entry_value = []
             for contract in contracts:
-                entry_value.append(contract)
+                if contract['type'] == 'ItemExchange' or contract['status'] == 'Outstanding' \
+                        or contract['status'] == 'Completed':
+                    entry_value.append(contract)
             result[apiId] = entry_value
         return result
 
@@ -133,15 +148,6 @@ class BuybackContractsParser:
                 contract['apiId'] = api_id
                 result.append(contract)
         return result
-
-    def extend_contracts_with_items(self, apis_with_contracts, apis):
-        urls = self.build_contract_items_urls(apis_with_contracts, apis)
-        api_response = self.external_provider.get_parallel_api_results(urls)
-        for response in api_response:
-            items = self.parse_items(response.text)
-            contract = self.find_contract_for_url(response.url, apis_with_contracts, apis)
-            contract['items'] = items
-        return apis_with_contracts
 
     def find_api_by_id(self, api_id, apis):
         for api in apis:
@@ -225,7 +231,3 @@ class BuybackContractsParser:
         for contract in contracts:
             result.append(contract['contractId'])
         return result
-
-
-if __name__ == '__main__':
-    BuybackContractsParser().main()
