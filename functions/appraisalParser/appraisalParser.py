@@ -3,6 +3,7 @@ import xml
 from datetime import datetime
 from html.parser import HTMLParser
 
+import grequests
 import requests
 from eveapimongo import MongoProvider
 
@@ -25,7 +26,12 @@ def lambda_handler(event, context):
 
 
 class AppraisalParser:
+    def __init__(self):
+        self.types = []
+
     def main(self):
+        for row in MongoProvider().find('types'):
+            self.types.append(row)
         result = []
         print("loading contracts")
         contracts = self.get_contracts()
@@ -38,6 +44,8 @@ class AppraisalParser:
         print("updating %d contracts" % len(result))
         if len(result) > 0:
             self.update_contracts(result)
+            MongoProvider().delete_all('types')
+            MongoProvider().cursor('types').insert_many(self.types)
 
     def get_contracts(self):
         result = []
@@ -90,9 +98,8 @@ class AppraisalParser:
         return result
 
     def get_appraisal_link(self, items):
-        items_with_names = self.get_items_with_names(items)
         print("types has %d entries" % len(self.types))
-        items_as_string = self.concatenate_items(items_with_names)
+        items_as_string = self.concatenate_items(items)
         payload = {'raw_paste': items_as_string, 'hide_buttons': 'false', 'paste_autosubmit': 'false',
                    'market': '30000142', 'save': 'true'}
         # this may fail on OS X https://github.com/kennethreitz/requests/issues/2022
@@ -116,26 +123,44 @@ class AppraisalParser:
             quantified_items.append(item['typeName'] + " x" + str(item['quantity']))
         return "\n".join(quantified_items)
 
-    types = {}
-
     def get_items_with_names(self, items):
-        new_items_count = 0
         before = datetime.now()
+        new_urls = []
         for item in items:
             type_id = item['typeId']
-            if type_id in self.types:
-                item['typeName'] = self.types[type_id]
+            inv_type = self.find_type(type_id)
+            if inv_type:
+                item['typeName'] = inv_type['typeName']
             else:
                 url = "https://crest-tq.eveonline.com/inventory/types/%d/" % type_id
-                response = requests.get(url)
-                data = json.loads(response.text)
-                item['typeName'] = data['name']
-                self.types[type_id] = data['name']
-                new_items_count += 1
+                new_urls.append(url)
+
+        responses = self.get_parallel_api_results(new_urls)
+        for response in responses:
+            data = json.loads(response.text)
+            type_name = data['name']
+            type_id = int(data['id'])
+            self.types.append({'typeId': type_id, 'typeName': type_name})
+
+        for item in items:
+            if 'typeName' not in item:
+                item['typeName'] = self.find_type(item['typeId'])['typeName']
+
         after = datetime.now()
         delta = after - before
-        print("loading %d new items took %ds" % (new_items_count, delta.seconds))
+        print("loading %d new items took %ds" % (len(new_urls), delta.seconds))
         return items
+
+    def get_parallel_api_results(self, urls):
+        rs = (grequests.get(u) for u in urls)
+        result = grequests.imap(rs)
+        return result
+
+    def find_type(self, type_id):
+        for item in self.types:
+            if item['typeId'] == type_id:
+                return item
+        return None
 
 
 if __name__ == '__main__':

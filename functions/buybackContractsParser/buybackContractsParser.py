@@ -45,6 +45,16 @@ class BuybackContractsParser:
         apis_with_contracts = self.transform_contract_responses_to_contracts(apis_with_responses)
         return apis_with_contracts
 
+    def build_contract_urls(self, apis):
+        urls = []
+        for api in apis:
+            verification = self.build_api_verifications(api)
+            # type can be corp or char
+            api_type = "/%s/" % api['type']
+            url = self.base_url + api_type + self.contract_endpoint + "?" + verification
+            urls.append({'apiId': api['_id'], 'url': url})
+        return urls
+
     def extend_contracts_with_items(self, apis_with_contracts, apis):
         urls = self.build_contract_items_urls(apis_with_contracts, apis)
         print("calling items endpoints with %d urls" % len(urls))
@@ -76,16 +86,6 @@ class BuybackContractsParser:
                     break
         return result
 
-    def build_contract_urls(self, apis):
-        urls = []
-        for api in apis:
-            verification = self.build_api_verifications(api)
-            # type can be corp or char
-            api_type = "/%s/" % api['type']
-            url = self.base_url + api_type + self.contract_endpoint + "?" + verification
-            urls.append({'apiId': api['_id'], 'url': url})
-        return urls
-
     def build_api_verifications(self, api):
         key = api['key']
         v_code = api['vCode']
@@ -93,13 +93,16 @@ class BuybackContractsParser:
 
     def transform_contract_responses_to_contracts(self, responses):
         result = {}
+        existing_contract_ids = []
+        for row in MongoProvider().find_filtered('contracts', {'$or': [{'status': 'Completed'}, {'status': 'Deleted'}]}):
+            existing_contract_ids.append(row.get('contractId'))
         for apiId in responses:
             contracts = self.transform_contract_response_to_contracts(responses[apiId])
             entry_value = []
             for contract in contracts:
-                if contract['type'] == 'ItemExchange' or contract['status'] == 'Outstanding' \
-                        or contract['status'] == 'Completed':
+                if contract['contractId'] not in existing_contract_ids:
                     entry_value.append(contract)
+                    print(contract['contractId'])
             result[apiId] = entry_value
         return result
 
@@ -231,3 +234,10 @@ class BuybackContractsParser:
         for contract in contracts:
             result.append(contract['contractId'])
         return result
+
+if __name__ == '__main__':
+    total_before = datetime.now()
+    BuybackContractsParser().main()
+    total_after = datetime.now()
+    total_delta = total_after - total_before
+    print("total duration: %ds" % total_delta.seconds)
