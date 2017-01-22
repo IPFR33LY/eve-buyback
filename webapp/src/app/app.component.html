@@ -40,8 +40,8 @@
         <tr *ngFor="let item of mf.data">
           <td>{{item.client}}</td>
           <td><a href="{{item.link}}" target="_blank">Appraisal</a></td>
-          <td>{{floor(item.buy) | numberGroups }} ISK</td>
           <td>{{floor(item.sell) | numberGroups }} ISK</td>
+          <td>{{floor(item.buy) | numberGroups }} ISK</td>
           <td [style.color]="getPriceBorderStyling(item)">{{floor(item.buy * buyFactor) | numberGroups }} ISK</td>
         </tr>
         </tbody>
