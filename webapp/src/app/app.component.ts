@@ -33,6 +33,9 @@ export class AppComponent {
 
   public getPriceBorderStyling(item:any) {
     let price = item['price'];
+    if (price == 0) {
+      return "green";
+    }
     let buybackPrice = item['buy'] * this.buyFactor;
     let percentDelta = ((price / buybackPrice) - 1) * 100;
     if (percentDelta > 5 || percentDelta < -5) {
