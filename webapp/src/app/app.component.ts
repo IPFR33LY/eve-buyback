@@ -10,7 +10,6 @@ import {environment} from "../environments/environment";
 export class AppComponent {
   public data;
   public filterQuery = "";
-  public rowsOnPage = 10;
   public sortBy = "buy";
   public sortOrder = "desc";
   public buyFactor = 0.97;
