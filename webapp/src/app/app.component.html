@@ -2,7 +2,10 @@
   <div class="col-xs-12 col-md-10 col-md-offset-1 col-lg-10 col-lg-offset-1">
 
     <div class="row">
-      <h2 class="col-xs-12">Buyback</h2>
+      <h2 class="col-xs-4">Buyback</h2>
+      <h2 class="col-xs-offset-2 col-xs-6 col-md-offset-4 col-md-4">
+        <small *ngIf="data">Total ISK float: {{ getTotalBuyback() | numberGroups }} ISK</small>
+      </h2>
     </div>
     <div class="panel panel-default">
       <div class="panel-heading">Contract information</div>

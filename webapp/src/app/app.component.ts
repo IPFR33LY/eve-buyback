@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import {Component, ChangeDetectorRef} from '@angular/core';
 import {Http} from "@angular/http";
 import {environment} from "../environments/environment";
 
@@ -22,6 +22,7 @@ export class AppComponent {
       .subscribe((data)=> {
         setTimeout(()=> {
           this.data = data.json();
+          // this.calcTotalBuyback(data.json());
         }, 1000);
       });
   }
@@ -44,4 +45,12 @@ export class AppComponent {
     }
   }
 
+  public getTotalBuyback() {
+    let total = 0;
+    for(let i = 0; i < this.data.length; i++) {
+      let item = this.data[i];
+      total += item.buy;
+    }
+    return this.floor(total * this.buyFactor);
+  }
 }
